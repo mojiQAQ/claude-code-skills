@@ -1,0 +1,74 @@
+{
+  "name": "xiaohongshu-publish",
+  "version": "2.0.0",
+  "description": "智能化小红书内容发布助手。支持视频、图文、长文多种形式，自动识别内容类型，提供爆款优化建议，包括标题优化、格式美化、官方话题推荐等。",
+  "author": "moji",
+  "license": "MIT",
+  "type": "user",
+  "triggers": [
+    "/xiaohongshu-publish",
+    "/xhs",
+    "/小红书发布"
+  ],
+  "dependencies": {
+    "mcp": ["playwright"]
+  },
+  "tags": [
+    "自动化",
+    "社交媒体",
+    "小红书",
+    "内容发布",
+    "爆款优化",
+    "智能推荐"
+  ],
+  "capabilities": [
+    "video_upload",
+    "image_upload",
+    "text_to_image",
+    "long_article",
+    "viral_optimization",
+    "topic_recommendation",
+    "auto_formatting",
+    "smart_scheduling"
+  ],
+  "features": {
+    "content_types": {
+      "video": {
+        "max_duration": "5min",
+        "max_size": "1GB",
+        "title_limit": 25
+      },
+      "image_post": {
+        "image_count": "1-9",
+        "image_format": ["jpg", "png"],
+        "max_image_size": "20MB",
+        "title_limit": 25,
+        "content_limit": 1000
+      },
+      "text_to_image": {
+        "max_text_per_image": 500,
+        "max_images": 9,
+        "title_limit": 25
+      },
+      "long_article": {
+        "title_limit": 64,
+        "content_limit": "unlimited",
+        "auto_format": true
+      }
+    },
+    "optimization": {
+      "title_generation": true,
+      "content_formatting": true,
+      "topic_recommendation": true,
+      "interaction_guide": true,
+      "best_time_suggestion": true
+    }
+  },
+  "metadata": {
+    "global": true,
+    "autoLoad": true,
+    "requiresLogin": true,
+    "platform": "xiaohongshu",
+    "language": "zh-CN"
+  }
+}

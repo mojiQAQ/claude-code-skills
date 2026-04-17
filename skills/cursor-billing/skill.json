@@ -1,0 +1,39 @@
+{
+  "name": "cursor-billing",
+  "version": "1.0.0",
+  "description": "Cursor 订阅报销自动化处理。自动登录多个 Cursor 账户，下载收据 PDF，OCR 识别交易记录截图，智能匹配收据与交易记录，统一重命名文件，汇总报销金额。",
+  "author": "moji",
+  "license": "MIT",
+  "type": "user",
+  "triggers": [
+    "/cursor-billing",
+    "/cursor报销",
+    "/报销处理"
+  ],
+  "dependencies": {
+    "mcp": ["playwright"]
+  },
+  "tags": [
+    "自动化",
+    "报销",
+    "Cursor",
+    "OCR",
+    "收据下载",
+    "财务"
+  ],
+  "capabilities": [
+    "browser_login",
+    "receipt_download",
+    "ocr_recognition",
+    "smart_matching",
+    "file_rename",
+    "amount_summary"
+  ],
+  "metadata": {
+    "global": true,
+    "autoLoad": true,
+    "requiresLogin": true,
+    "platform": "cursor",
+    "language": "zh-CN"
+  }
+}

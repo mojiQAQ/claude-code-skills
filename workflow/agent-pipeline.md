@@ -1,0 +1,105 @@
+# Agent 流水线工作流配置
+
+将以下内容添加到你项目的 `CLAUDE.md` 文件中，即可启用完整的 Agent 流水线自动化工作流。
+
+## 完整配置
+
+```markdown
+## 开发工作流规则（必须遵守）
+
+所有开发任务，无论大小，都必须自动按以下 agent 流水线执行，不需要用户提醒：
+
+### 完整流水线（从想法到上线）
+
+用户想法/需求
+    │
+    ▼
+┌─────────────────┐
+│ product-manager  │  需求模糊或需要市场调研时启动
+│ (产品经理 Agent) │  输出: docs/PRD-{产品名}-{日期}.md
+└────────┬────────┘
+         │ PRD 文档
+         ▼
+┌─────────────────────┐
+│ feature-decomposer   │  将 PRD/需求拆解为功能组 + 里程碑
+│ (功能拆解 Agent)     │  输出: docs/product-spec.md
+│                      │        docs/requirements-traceability.md
+└────────┬────────────┘
+         │ 功能清单 + 验收标准
+         ▼
+┌─────────────────────────┐
+│ frontend-page-designer   │  基于功能规格出 UI/页面设计
+│ (页面设计 Agent)         │  输出: 设计规格文档
+└────────┬────────────────┘
+         │ 设计规格
+         ▼
+┌─────────────────┐
+│ module-coder     │  按功能清单顺序持续编码实现
+│ (编码 Agent)     │  到里程碑节点暂停，交给 QA
+└────────┬────────┘
+         │ 代码实现
+         ▼
+┌────────────────────────────┐
+│ design-parity-inspector     │  审核 UI 实现与设计规格的还原度
+│ (设计还原审核 Agent)        │  输出: 设计一致性报告
+└────────┬───────────────────┘
+         │ 设计审核报告
+         ▼
+┌─────────────────┐
+│ qa-inspector     │  里程碑节点做质量验收
+│ (QA Agent)       │  验证验收标准，更新追踪清单
+└─────────────────┘
+
+### 各阶段触发规则
+
+| 阶段 | Agent | 何时触发 | 输入 | 输出 |
+|------|-------|---------|------|------|
+| 0 | **product-manager** | 需求模糊、需要竞品分析、用户说"调研一下"、从零开始的新产品 | 用户的模糊想法 | `docs/PRD-*.md` |
+| 1 | **feature-decomposer** | 有明确的 PRD 或需求描述 | PRD 或用户需求 | `docs/product-spec.md` + `docs/requirements-traceability.md` |
+| 2 | **frontend-page-designer** | 有 UI/页面相关的功能需要设计 | 功能清单 | 设计规格 |
+| 3 | **module-coder** | 功能清单已确认 | 功能清单 + 设计规格 | 代码实现 |
+| 4 | **design-parity-inspector** | coder 实现了有 UI 的功能 | 代码 + 设计规格 | 设计一致性报告 |
+| 5 | **qa-inspector** | coder 到达里程碑节点 | 代码 + 追踪清单 + 设计审核报告 | QA 报告 |
+
+### 大型需求（新功能、新页面、重构等）
+
+按需从以下步骤开始：
+- **需求模糊时**：从 product-manager 开始 → 完整走完 0-5
+- **需求明确时**：从 feature-decomposer 开始 → 走 1-5
+- **纯后端/无 UI**：跳过 frontend-page-designer 和 design-parity-inspector → 走 1, 3, 5
+
+### 小型任务（bug 修复、小改动等）
+1. **module-coder** — 开始开发修复
+2. **qa-inspector** — 测试验收
+
+### 流水线协作规范
+
+- 每个 agent 的输出文档是下一个 agent 的输入，**必须写入 `docs/` 目录**
+- `docs/requirements-traceability.md` 是全链路的"对账底本"，从 feature-decomposer 生成，module-coder 和 qa-inspector 持续更新
+- 上游 agent 完成后，自动启动下一个 agent，不等用户指令
+- 如果某阶段发现上游问题（如 PRD 缺失关键信息），可以回溯到上游 agent 补充
+
+**绝对不要跳过这个流程，不要等用户提醒，收到任务就直接启动对应流水线。**
+```
+
+## Agent 说明
+
+| Agent | 类型 | 职责 | 工具 |
+|-------|------|------|------|
+| `product-manager` | 产品经理 | 需求调研、竞品分析、用户画像、输出 PRD | WebSearch, WebFetch, Read, Write |
+| `feature-decomposer` | 功能拆解 | 将 PRD 拆解为功能组 + 里程碑 + 验收标准 | Read, Write, Glob, Grep |
+| `frontend-page-designer` | 页面设计 | 基于功能规格输出 UI/交互设计规格 | Read, Write, Glob, Grep |
+| `module-coder` | 编码实现 | 按功能清单持续编码，到里程碑节点暂停 | 全部工具 |
+| `design-parity-inspector` | 设计还原审核 | 对比 UI 实现与设计规格的一致性 | 全部工具 |
+| `qa-inspector` | 质量验收 | 里程碑质量验收，验证验收标准 | 全部工具 |
+
+## 自定义提示
+
+你可以根据项目需要调整各阶段的行为。例如，如果你的项目是纯后端 API，可以在配置中加入：
+
+```markdown
+### 后端 API 项目简化流水线
+- 跳过 frontend-page-designer（无 UI）
+- 跳过 design-parity-inspector（无设计规格）
+- 流水线：feature-decomposer → module-coder → qa-inspector
+```
