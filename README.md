@@ -1,14 +1,16 @@
-# Claude Code Skills & Agent Pipeline
+# Claude Code Agents & Skills
 
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Claude Code](https://img.shields.io/badge/Claude%20Code-Skills-orange.svg)
+![Claude Code](https://img.shields.io/badge/Claude%20Code-Agents-orange.svg)
 
-**一套面向 [Claude Code](https://claude.ai/code) 的自定义 Skills 和 Agent 流水线工作流**
+**一套面向 [Claude Code](https://claude.ai/code) 的自定义 Agent 子系统 + 自动化开发流水线**
 
-[Skills 列表](#-skills-列表) | [Agent 工作流](#-agent-流水线工作流) | [安装指南](#-安装) | [使用说明](#-使用)
+将产品构思到代码上线的完整流程，编排为 7 个专职 Agent 的自动化流水线。
+
+[Agent 总览](#agent-总览) | [流水线架构](#流水线架构) | [安装指南](#安装) | [CLAUDE.md 配置](#在-claudemd-中启用流水线) | [Skills](#附赠-skills)
 
 </div>
 
@@ -16,232 +18,215 @@
 
 ## 项目简介
 
-这个仓库包含两部分内容：
+这个仓库包含：
 
-1. **自定义 Skills** — 可直接安装到 Claude Code 的功能扩展插件
-2. **Agent 流水线工作流** — 一套将 Claude Code 内置 Agent 类型编排为自动化开发流水线的 `CLAUDE.md` 配置方案
+1. **7 个自定义 Agent 定义文件** — 放入 `~/.claude/agents/` 即可被 Claude Code 识别和调度
+2. **Agent 流水线工作流配置** — 通过 `CLAUDE.md` 让 Agent 之间自动协作，形成完整的软件开发流水线
+3. **2 个自定义 Skills** — 小红书智能发布助手 + Cursor 报销自动化（附赠）
 
-两者可以独立使用，也可以组合使用。
+## Agent 总览
 
-## Skills 列表
+| Agent | 角色 | 职责 | 输出 |
+|-------|------|------|------|
+| [`product-manager`](agents/product-manager.md) | 产品经理 | 竞品调研、用户分析、需求提炼 | `docs/PRD-*.md` |
+| [`feature-decomposer`](agents/feature-decomposer.md) | 功能拆解师 | 将 PRD 拆解为功能组 + 里程碑 + 验收标准 | `docs/product-spec.md` + `docs/requirements-traceability.md` |
+| [`frontend-page-designer`](agents/frontend-page-designer.md) | 页面设计师 | 基于功能规格产出 UI/交互设计规格 | `docs/page-design-spec.md` |
+| [`designer`](agents/designer.md) | 视觉实现师 | 将设计规格转化为生产级 UI 代码 | 可工作的前端组件代码 |
+| [`module-coder`](agents/module-coder.md) | 全栈工程师 | 按功能清单连续编码，里程碑处暂停 | 代码 + `docs/milestone-N-report.md` |
+| [`design-parity-inspector`](agents/design-parity-inspector.md) | 设计还原审核 | 对比实现与设计规格的一致性 | `docs/design-parity-report.md` |
+| [`qa-inspector`](agents/qa-inspector.md) | QA 工程师 | 里程碑质量验收，4 维度评分 + 硬阈值 | `docs/milestone-N-qa-report.md` |
 
-### xiaohongshu-publish（小红书智能发布助手）
+### Agent 设计亮点
 
-智能化小红书内容发布工具，支持视频、图文、长文多种形式，提供爆款优化建议。
-
-| 特性 | 说明 |
-|------|------|
-| 多格式支持 | 视频、图片上传、文字配图、长文 |
-| 爆款标题生成 | 基于 5 大公式自动生成 3-5 个标题方案 |
-| 话题推荐 | 覆盖 10 大垂直领域的官方话题库 |
-| 发布时间建议 | 根据内容类型推荐最佳发布时段 |
-| 一键发布 | 通过 Playwright 自动完成发布流程 |
-
-**触发命令**: `/xhs` `/xiaohongshu-publish` `/小红书发布`
-
-**依赖**: Playwright MCP
-
-> 详细文档: [skills/xiaohongshu-publish/SKILL.md](skills/xiaohongshu-publish/SKILL.md)
-
----
-
-### cursor-billing（Cursor 订阅报销自动化）
-
-自动完成 Cursor 订阅的月度报销全流程：登录账户 → 下载收据 → OCR 识别交易截图 → 智能匹配 → 文件重命名 → 金额汇总。
-
-| 特性 | 说明 |
-|------|------|
-| 多账户批量处理 | 自动登录并切换多个 Cursor 账户 |
-| 收据自动下载 | 从 Cursor Billing 页面下载 PDF 收据 |
-| OCR 交易识别 | 使用 macOS Vision 框架识别银行交易截图 |
-| 智能匹配 | 自动将收据与交易记录配对（金额+日期+卡号） |
-| 统一命名 | 按规范格式重命名所有报销文件 |
-| 金额汇总 | 输出完整的匹配明细表和汇总表 |
-
-**触发命令**: `/cursor-billing` `/cursor报销` `/报销处理`
-
-**依赖**: Playwright MCP, macOS（OCR 依赖 Vision 框架）
-
-> 详细文档: [skills/cursor-billing/SKILL.md](skills/cursor-billing/SKILL.md)
+- **product-manager**: 强制深度竞品调研（至少 3-5 个直接竞品），输出带数据来源的 PRD，不接受"拍脑袋"需求
+- **feature-decomposer**: 自动生成需求追踪清单（`requirements-traceability.md`），作为全链路的"对账底本"
+- **module-coder**: 里程碑前强制需求对账，防止"实现了但漏了需求"；QA 通过后自动 git commit
+- **qa-inspector**: 类似 GAN 判别器的对抗设计，内置"抗宽容校准"机制，强制 E2E 浏览器测试
+- **design-parity-inspector**: 5 维度评分（还原度/统一性/业务适配/高级感/交互完整性），拒绝"AI 味"设计
 
 ---
 
-## Agent 流水线工作流
-
-这是一套通过 `CLAUDE.md` 配置实现的 Agent 自动化工作流，将 Claude Code 内置的 6 种 Agent 类型编排为完整的软件开发流水线。
-
-### 流水线架构
+## 流水线架构
 
 ```
 用户想法/需求
     │
     ▼
 ┌─────────────────┐
-│ product-manager  │  产品经理：需求调研、竞品分析、输出 PRD
+│ product-manager  │  需求模糊时启动
+│ (产品经理)       │  竞品调研 → 用户画像 → PRD
 └────────┬────────┘
+         │ docs/PRD-*.md
          ▼
 ┌─────────────────────┐
-│ feature-decomposer   │  功能拆解：PRD → 功能组 + 里程碑 + 验收标准
+│ feature-decomposer   │  需求明确时直接从这里开始
+│ (功能拆解)           │  PRD → 功能组 + 里程碑 + 验收标准
 └────────┬────────────┘
+         │ docs/product-spec.md
+         │ docs/requirements-traceability.md
          ▼
 ┌─────────────────────────┐
-│ frontend-page-designer   │  页面设计：功能规格 → UI/交互设计规格
+│ frontend-page-designer   │  有 UI 时启动
+│ (页面设计)               │  功能规格 → UI/交互设计规格
 └────────┬────────────────┘
+         │ docs/page-design-spec.md
          ▼
 ┌─────────────────┐
-│ module-coder     │  编码实现：按功能清单持续编码
+│ module-coder     │  按功能清单连续编码
+│ (编码实现)       │  里程碑处暂停 → 交付报告
 └────────┬────────┘
+         │ 代码 + docs/milestone-N-report.md
          ▼
 ┌────────────────────────────┐
-│ design-parity-inspector     │  设计还原审核：对比实现与设计规格
+│ design-parity-inspector     │  有 UI 时启动
+│ (设计还原审核)              │  对比实现 vs 设计规格
 └────────┬───────────────────┘
+         │ docs/design-parity-report.md
          ▼
 ┌─────────────────┐
-│ qa-inspector     │  质量验收：里程碑节点做质量检查
-└─────────────────┘
+│ qa-inspector     │  里程碑节点质量验收
+│ (QA 验收)        │  4 维度评分 + E2E 测试
+└────────┬────────┘
+         │ docs/milestone-N-qa-report.md
+         ▼
+    🟢 通过 → module-coder 执行 git commit → 继续下一批功能
+    🔴 不通过 → module-coder 修复 → 重新提交 QA
 ```
-
-### Agent 角色说明
-
-| Agent | 角色 | 触发条件 | 输出文档 |
-|-------|------|---------|---------|
-| `product-manager` | 产品经理 | 需求模糊、需要竞品分析 | `docs/PRD-*.md` |
-| `feature-decomposer` | 功能拆解 | 有明确的 PRD 或需求 | `docs/product-spec.md` |
-| `frontend-page-designer` | 页面设计 | 有 UI 相关功能 | 设计规格文档 |
-| `module-coder` | 编码实现 | 功能清单已确认 | 代码 + 里程碑报告 |
-| `design-parity-inspector` | 设计审核 | UI 功能实现完成 | 设计一致性报告 |
-| `qa-inspector` | 质量验收 | 到达里程碑节点 | QA 报告 |
 
 ### 三种使用模式
 
-**完整流水线**（适用于新功能、新产品）:
+| 模式 | 适用场景 | 流水线 |
+|------|---------|--------|
+| **完整流水线** | 新产品、需求模糊 | PM → Decomposer → Designer → Coder → Design Review → QA |
+| **简化流水线** | 需求已明确 | Decomposer → Designer → Coder → Design Review → QA |
+| **快速修复** | Bug 修复、小改动 | Coder → QA |
+| **纯后端** | 无 UI 项目 | Decomposer → Coder → QA |
+
+### 文档流转机制
+
+Agent 之间通过 `docs/` 目录下的文档进行协作：
+
 ```
-product-manager → feature-decomposer → frontend-page-designer → module-coder → design-parity-inspector → qa-inspector
+docs/
+├── PRD-{产品名}-{日期}.md          ← product-manager 输出
+├── product-spec.md                 ← feature-decomposer 输出
+├── requirements-traceability.md    ← decomposer 生成，coder/QA 持续更新
+├── page-design-spec.md             ← frontend-page-designer 输出
+├── milestone-1-report.md           ← module-coder 输出
+├── milestone-1-design-review.md    ← design-parity-inspector 输出
+└── milestone-1-qa-report.md        ← qa-inspector 输出
 ```
 
-**简化流水线**（适用于需求已明确的任务）:
-```
-feature-decomposer → frontend-page-designer → module-coder → design-parity-inspector → qa-inspector
-```
+`requirements-traceability.md` 是核心对账文档，状态流转：
 
-**快速修复**（适用于 bug 修复、小改动）:
 ```
-module-coder → qa-inspector
+🔲 待实现 (decomposer)
+    → 🚧 开发中 (coder)
+        → ✅ 已实现 (coder)
+            → ✔️ QA 确认 (qa-inspector)
+            → 🔴 QA 驳回 (qa-inspector)
 ```
-
-> 详细配置: [workflow/agent-pipeline.md](workflow/agent-pipeline.md)
 
 ---
 
 ## 安装
 
-### 方法一：克隆整个仓库到 skills 目录
+### 1. 安装 Agent 定义文件
+
+将 `agents/` 目录下的 `.md` 文件复制到 Claude Code 的 agents 目录：
 
 ```bash
 # 克隆仓库
 git clone https://github.com/mojiQAQ/claude-code-skills.git
+cd claude-code-skills
 
-# 将 skills 复制到 Claude Code 的工作目录
-cp -r claude-code-skills/skills/xiaohongshu-publish ~/.claude/skills/
-cp -r claude-code-skills/skills/cursor-billing ~/.claude/skills/
+# 复制 Agent 文件（全局生效）
+cp agents/*.md ~/.claude/agents/
+
+# 验证安装
+ls ~/.claude/agents/
+# 应该看到:
+# product-manager.md
+# feature-decomposer.md
+# frontend-page-designer.md
+# designer.md
+# module-coder.md
+# design-parity-inspector.md
+# qa-inspector.md
 ```
 
-### 方法二：只安装单个 Skill
-
-```bash
-# 只安装小红书发布助手
-cd ~/.claude/skills
-git clone https://github.com/mojiQAQ/claude-code-skills.git
-ln -s claude-code-skills/skills/xiaohongshu-publish ./xiaohongshu-publish
-
-# 或直接复制
-cp -r claude-code-skills/skills/xiaohongshu-publish ./
-```
-
-### 方法三：作为项目级 Skill
-
-将 Skill 目录放入你的项目根目录：
+也可以安装为项目级 Agent（仅在特定项目中生效）：
 
 ```bash
 cd your-project
-mkdir -p .claude/skills
-cp -r /path/to/claude-code-skills/skills/xiaohongshu-publish .claude/skills/
+mkdir -p .claude/agents
+cp /path/to/claude-code-skills/agents/*.md .claude/agents/
 ```
 
-### 安装 Agent 工作流
+### 2. 在 CLAUDE.md 中启用流水线
 
-将工作流配置添加到你项目的 `CLAUDE.md` 文件中：
+安装 Agent 文件后，还需要在 `CLAUDE.md` 中配置流水线规则，让 Claude Code 知道**何时**调用**哪个** Agent。
+
+#### 方法一：复制示例配置（推荐）
 
 ```bash
-# 方法 1：直接复制示例配置
-cat claude-code-skills/examples/CLAUDE.md.example >> your-project/CLAUDE.md
+# 追加到全局 CLAUDE.md
+cat examples/CLAUDE.md.example >> ~/.claude/CLAUDE.md
 
-# 方法 2：手动添加
-# 参考 workflow/agent-pipeline.md 中的配置，复制到你的 CLAUDE.md
+# 或追加到项目级 CLAUDE.md
+cat examples/CLAUDE.md.example >> your-project/CLAUDE.md
 ```
 
----
+#### 方法二：手动添加
 
-## 使用
-
-### 使用 Skills
-
-在 Claude Code 中直接输入触发命令：
-
-```bash
-# 小红书发布
-/xhs
-
-# Cursor 报销
-/cursor-billing
-```
-
-### 使用 Agent 工作流
-
-配置好 `CLAUDE.md` 后，直接向 Claude Code 描述你的需求即可。Agent 会根据需求自动选择流水线模式：
-
-```bash
-# 需求模糊 → 自动从 product-manager 开始
-"我想做一个类似 Notion 的笔记产品"
-
-# 需求明确 → 自动从 feature-decomposer 开始
-"给这个项目添加用户认证功能，要支持 OAuth 和邮箱登录"
-
-# 小任务 → 自动走 module-coder + qa-inspector
-"修复登录页面的样式错位问题"
-```
-
-### 在 CLAUDE.md 中配置 Skills + 工作流
-
-你可以在同一个 `CLAUDE.md` 中同时配置工作流和 Skill 的使用说明：
+将以下内容添加到你的 `CLAUDE.md` 中：
 
 ```markdown
-# CLAUDE.md
+## 开发工作流规则（必须遵守）
 
-## 项目信息
-- 项目名称：MyApp
-- 技术栈：Vue 3 + TypeScript + FastAPI
+所有开发任务，无论大小，都必须自动按以下 agent 流水线执行，不需要用户提醒：
 
-## 开发工作流规则
-<!-- 粘贴 examples/CLAUDE.md.example 的内容 -->
+### 各阶段触发规则
 
-## 常用 Skills
-- 发布小红书内容时使用 /xhs
-- 每月报销时使用 /cursor-billing
+| 阶段 | Agent | 何时触发 | 输入 | 输出 |
+|------|-------|---------|------|------|
+| 0 | **product-manager** | 需求模糊、需要竞品分析 | 用户的模糊想法 | `docs/PRD-*.md` |
+| 1 | **feature-decomposer** | 有明确的 PRD 或需求描述 | PRD 或用户需求 | `docs/product-spec.md` + `docs/requirements-traceability.md` |
+| 2 | **frontend-page-designer** | 有 UI/页面相关的功能需要设计 | 功能清单 | 设计规格 |
+| 3 | **module-coder** | 功能清单已确认 | 功能清单 + 设计规格 | 代码实现 |
+| 4 | **design-parity-inspector** | coder 实现了有 UI 的功能 | 代码 + 设计规格 | 设计一致性报告 |
+| 5 | **qa-inspector** | coder 到达里程碑节点 | 代码 + 追踪清单 | QA 报告 |
+
+### 流水线协作规范
+
+- 每个 agent 的输出文档是下一个 agent 的输入，**必须写入 `docs/` 目录**
+- `docs/requirements-traceability.md` 是全链路的"对账底本"
+- 上游 agent 完成后，自动启动下一个 agent，不等用户指令
+- 如果某阶段发现上游问题，可以回溯到上游 agent 补充
+
+**绝对不要跳过这个流程，不要等用户提醒，收到任务就直接启动对应流水线。**
 ```
 
----
+> 完整配置模板见 [examples/CLAUDE.md.example](examples/CLAUDE.md.example)，详细说明见 [workflow/agent-pipeline.md](workflow/agent-pipeline.md)
 
-## 前置依赖
+### 3. 安装 Skills（可选）
 
-| 依赖 | 用途 | 安装方式 |
-|------|------|---------|
-| [Claude Code](https://claude.ai/code) | AI 编程助手 | `npm install -g @anthropic-ai/claude-code` |
-| [Playwright MCP](https://github.com/anthropics/mcp) | 浏览器自动化 | 在 Claude Code 设置中启用 |
+```bash
+# 安装小红书发布助手
+cp -r skills/xiaohongshu-publish ~/.claude/skills/
 
-### Playwright MCP 配置
+# 安装 Cursor 报销自动化
+cp -r skills/cursor-billing ~/.claude/skills/
+```
 
-在 Claude Code 的 settings.json 中添加：
+### 前置依赖
+
+| 依赖 | 用途 | 必需？ |
+|------|------|--------|
+| [Claude Code](https://claude.ai/code) | AI 编程助手 | 必需 |
+| [Playwright MCP](https://github.com/anthropics/mcp) | E2E 测试 + 浏览器自动化 | QA 测试 / Skills 需要 |
+
+Playwright MCP 配置（在 Claude Code 的 settings.json 中添加）：
 
 ```json
 {
@@ -256,66 +241,202 @@ cat claude-code-skills/examples/CLAUDE.md.example >> your-project/CLAUDE.md
 
 ---
 
+## 使用示例
+
+### 场景 1：从零开始做一个新产品
+
+```
+你: 我想做一个 AI 面试助手
+
+Claude Code 自动执行:
+1. product-manager → 竞品调研 (面试相关产品)、用户画像、输出 PRD
+2. feature-decomposer → 拆解功能清单、设定里程碑、生成追踪清单
+3. frontend-page-designer → 设计页面和交互规格
+4. module-coder → 连续编码实现
+5. design-parity-inspector → 审核 UI 还原度
+6. qa-inspector → 质量验收 (E2E 测试 + 4 维度评分)
+```
+
+### 场景 2：给现有项目加功能
+
+```
+你: 给这个项目添加用户认证功能，要支持 OAuth 和邮箱登录
+
+Claude Code 自动执行:
+1. feature-decomposer → 拆解认证功能、设定里程碑
+2. frontend-page-designer → 设计登录/注册页面
+3. module-coder → 实现认证系统
+4. design-parity-inspector → 审核 UI
+5. qa-inspector → 安全测试 + 功能验收
+```
+
+### 场景 3：修 Bug
+
+```
+你: 修复登录页面的样式错位问题
+
+Claude Code 自动执行:
+1. module-coder → 定位并修复问题
+2. qa-inspector → 回归测试
+```
+
+---
+
+## 各 Agent 详细说明
+
+### product-manager（产品经理）
+
+**核心理念**: "好的 PRD 是基于数据和调研的，不是基于拍脑袋的臆想"
+
+- 强制深度竞品分析：至少 3-5 个直接竞品 + 2-3 个间接竞品
+- 多角度搜索策略（英文/中文/Reddit/GitHub）
+- 输出带数据来源的完整 PRD（竞品矩阵 + 用户画像 + MoSCoW 需求分级）
+- 质量门控：每条数据必须标注来源，不能凭空编造
+
+### feature-decomposer（功能拆解师）
+
+**核心理念**: "定义 WHAT 和 WHY，不是 HOW"
+
+- 将 PRD 拆解为有序功能组 + QA 里程碑
+- 自动生成 `requirements-traceability.md` 需求追踪清单
+- 每个功能有清晰的用户故事和可测试的验收标准
+- 里程碑设在"方向性风险最高"的节点
+
+### frontend-page-designer（页面设计师）
+
+**核心理念**: "你不是通用的视觉装饰师"
+
+- 4 层设计目标：统一性 → 业务适配 → 高级感/去 AI 化 → 交互完整性
+- 明确 hover/active/focus/disabled/loading/empty/error/success 等全状态
+- 输出可让 module-coder 实现的设计规格文档
+
+### designer（视觉实现师）
+
+**核心理念**: "平庸的界面会侵蚀用户信任"
+
+- 自动检测项目前端框架，匹配已有代码风格
+- 拒绝通用字体（Inter/Roboto/Arial）和 AI 味设计（紫色渐变白底）
+- 产出生产级、有设计辨识度的可工作代码
+
+### module-coder（全栈工程师）
+
+**核心理念**: "连续实现，里程碑暂停"
+
+- 按功能清单顺序连续编码，不需要为每个功能单独确认
+- 里程碑前**强制需求对账**：逐条比对追踪清单，防止遗漏
+- 自动更新追踪清单状态
+- QA 通过后自动执行 git commit
+
+### design-parity-inspector（设计还原审核）
+
+**核心理念**: "缺少证据不等于通过评审"
+
+- 5 维度评分：设计还原度 / 规范统一性 / 业务适配 / 高级感 / 交互完整性
+- 问题分级：🔴 严重 / 🟡 中等 / 🟢 轻微
+- 每个结论必须有截图/代码证据支撑
+
+### qa-inspector（QA 工程师）
+
+**核心理念**: "你和 coder 是对抗关系，你的职责是找出问题"
+
+- 4 维度评分 + 硬阈值（功能完整性≥7 / 可靠性≥6 / 用户体验≥6 / 代码质量≥5）
+- 强制 E2E 浏览器测试（Playwright MCP）
+- 内置"抗宽容校准"：如果第一反应给 8 分，先找 3 个问题再决定
+- 独立验证 coder 的自标记，不信任 ✅ 直到自己验证
+
+---
+
 ## 项目结构
 
 ```
 claude-code-skills/
-├── README.md                           # 本文件
-├── LICENSE                             # MIT 许可证
-├── skills/
-│   ├── xiaohongshu-publish/            # 小红书智能发布助手
-│   │   ├── SKILL.md                    # Skill 定义文件（Claude Code 读取）
-│   │   ├── skill.json                  # Skill 元数据
-│   │   └── LICENSE                     # MIT 许可证
-│   └── cursor-billing/                 # Cursor 报销自动化
-│       ├── SKILL.md                    # Skill 定义文件
-│       └── skill.json                  # Skill 元数据
+├── README.md                               # 本文件
+├── LICENSE                                  # MIT 许可证
+├── agents/                                  # Agent 定义文件（核心）
+│   ├── product-manager.md                   # 产品经理 Agent
+│   ├── feature-decomposer.md                # 功能拆解 Agent
+│   ├── frontend-page-designer.md            # 页面设计 Agent
+│   ├── designer.md                          # 视觉实现 Agent
+│   ├── module-coder.md                      # 编码实现 Agent
+│   ├── design-parity-inspector.md           # 设计还原审核 Agent
+│   └── qa-inspector.md                      # QA 验收 Agent
 ├── workflow/
-│   └── agent-pipeline.md               # Agent 流水线详细文档
-└── examples/
-    └── CLAUDE.md.example               # CLAUDE.md 工作流配置示例
+│   └── agent-pipeline.md                    # 流水线详细文档
+├── examples/
+│   └── CLAUDE.md.example                    # CLAUDE.md 配置模板
+└── skills/                                  # 附赠 Skills
+    ├── xiaohongshu-publish/                 # 小红书智能发布助手
+    │   ├── SKILL.md
+    │   ├── skill.json
+    │   └── LICENSE
+    └── cursor-billing/                      # Cursor 报销自动化
+        ├── SKILL.md
+        └── skill.json
 ```
 
 ---
 
-## 自己开发 Skill
+## 自定义与扩展
 
-一个最简单的 Skill 只需要一个 `SKILL.md` 文件：
+### 创建自己的 Agent
+
+Agent 定义文件是一个带 YAML frontmatter 的 Markdown 文件，放入 `~/.claude/agents/` 即可：
 
 ```markdown
 ---
-name: my-skill
-description: 这个 skill 做什么
-license: MIT
-triggers:
-  - /my-skill
-  - /ms
+name: "my-agent"
+description: "Agent 的用途描述，Claude Code 据此决定何时调用"
+model: opus
+color: blue
+memory: user
 ---
 
-# My Skill
+你是 [角色]，负责 [职责]...
 
-这里写 skill 的详细指令...
+## 工作流程
+...
+
+## 输出要求
+...
 ```
 
-可选添加 `skill.json` 提供结构化元数据：
+**关键字段说明:**
 
-```json
-{
-  "name": "my-skill",
-  "version": "1.0.0",
-  "description": "这个 skill 做什么",
-  "author": "your-name",
-  "license": "MIT",
-  "triggers": ["/my-skill", "/ms"],
-  "dependencies": {
-    "mcp": ["playwright"]
-  },
-  "tags": ["自动化"],
-  "metadata": {
-    "language": "zh-CN"
-  }
-}
+| 字段 | 说明 |
+|------|------|
+| `name` | Agent 唯一标识，用于在 CLAUDE.md 中引用 |
+| `description` | Claude Code 用来判断何时调用此 Agent 的描述 |
+| `model` | 使用的模型（`opus` / `sonnet` / `haiku`） |
+| `color` | 在 CLI 中显示的颜色标识 |
+| `memory` | 记忆范围（`user` = 用户级） |
+
+### 调整流水线
+
+你可以根据项目需要调整流水线行为，在 `CLAUDE.md` 中自定义：
+
+```markdown
+## 项目特殊规则
+
+- 本项目是纯后端 API，跳过 frontend-page-designer 和 design-parity-inspector
+- 里程碑 QA 不需要 E2E 浏览器测试，用 curl 测试 API 即可
+- module-coder 每完成 3 个功能做一次 QA，不等里程碑
 ```
+
+---
+
+## 附赠 Skills
+
+### xiaohongshu-publish（小红书智能发布助手）
+
+智能化小红书内容发布：视频/图文/长文，爆款标题生成，话题推荐，一键发布。
+
+**触发**: `/xhs` `/xiaohongshu-publish` `/小红书发布`
+
+### cursor-billing（Cursor 报销自动化）
+
+Cursor 订阅月度报销全流程：多账户登录 → 收据下载 → OCR 识别 → 智能匹配 → 金额汇总。
+
+**触发**: `/cursor-billing` `/cursor报销` `/报销处理`
 
 ---
 
