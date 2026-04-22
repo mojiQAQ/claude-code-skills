@@ -1,0 +1,26 @@
+{
+  "name": "claude-code-skills",
+  "owner": {
+    "name": "moji",
+    "url": "https://github.com/mojiQAQ"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-skills",
+      "source": ".",
+      "description": "7-agent 软件开发流水线（PM → Decomposer → Designer → Coder → Design Review → QA）+ 实用 Skills。",
+      "version": "1.0.0",
+      "author": {
+        "name": "moji"
+      },
+      "homepage": "https://github.com/mojiQAQ/claude-code-skills",
+      "license": "MIT",
+      "keywords": [
+        "agents",
+        "pipeline",
+        "workflow",
+        "chinese"
+      ]
+    }
+  ]
+}

@@ -131,93 +131,58 @@ docs/
 
 ## 安装
 
-### 1. 安装 Agent 定义文件
+本仓库已按 **Claude Code Plugin** 规范组织，一次安装即可得到全部 agents + skills + slash commands。
 
-将 `agents/` 目录下的 `.md` 文件复制到 Claude Code 的 agents 目录：
+### 方式一：作为 Plugin 安装（推荐）
+
+把本仓库作为一个 marketplace 加入 Claude Code，然后安装 plugin：
 
 ```bash
-# 克隆仓库
+# 1) 添加本仓库为 marketplace
+/plugin marketplace add mojiQAQ/claude-code-skills
+
+# 2) 安装 plugin
+/plugin install claude-code-skills@claude-code-skills
+```
+
+安装后立刻生效：
+
+- 7 个 agents 自动注册：`product-manager`、`feature-decomposer`、`frontend-page-designer`、`designer`、`module-coder`、`design-parity-inspector`、`qa-inspector`
+- 1 个编排 skill：`/dev-pipeline` —— 激活流水线工作规则
+- 1 个工具 skill：`/cursor-billing` —— Cursor 订阅报销自动化
+- 1 个工具 skill：`/xiaohongshu-publish` —— 小红书内容发布
+- 1 个 slash command：`/pipeline-init` —— 一键在当前项目 `CLAUDE.md` 写入流水线配置
+
+### 方式二：本地目录安装（开发调试）
+
+```bash
+git clone https://github.com/mojiQAQ/claude-code-skills.git
+# 在 Claude Code 中把本地路径加为 marketplace
+/plugin marketplace add /path/to/claude-code-skills
+/plugin install claude-code-skills@claude-code-skills
+```
+
+### 方式三：手工复制（不使用 plugin 机制时的后备方案）
+
+```bash
 git clone https://github.com/mojiQAQ/claude-code-skills.git
 cd claude-code-skills
 
-# 复制 Agent 文件（全局生效）
-cp agents/*.md ~/.claude/agents/
-
-# 验证安装
-ls ~/.claude/agents/
-# 应该看到:
-# product-manager.md
-# feature-decomposer.md
-# frontend-page-designer.md
-# designer.md
-# module-coder.md
-# design-parity-inspector.md
-# qa-inspector.md
-```
-
-也可以安装为项目级 Agent（仅在特定项目中生效）：
-
-```bash
-cd your-project
-mkdir -p .claude/agents
-cp /path/to/claude-code-skills/agents/*.md .claude/agents/
-```
-
-### 2. 在 CLAUDE.md 中启用流水线
-
-安装 Agent 文件后，还需要在 `CLAUDE.md` 中配置流水线规则，让 Claude Code 知道**何时**调用**哪个** Agent。
-
-#### 方法一：复制示例配置（推荐）
-
-```bash
-# 追加到全局 CLAUDE.md
+cp agents/*.md        ~/.claude/agents/
+cp -r skills/*        ~/.claude/skills/
 cat examples/CLAUDE.md.example >> ~/.claude/CLAUDE.md
-
-# 或追加到项目级 CLAUDE.md
-cat examples/CLAUDE.md.example >> your-project/CLAUDE.md
 ```
 
-#### 方法二：手动添加
+### 在项目中启用流水线
 
-将以下内容添加到你的 `CLAUDE.md` 中：
+Plugin 装好后，进入任意项目运行：
 
-```markdown
-## 开发工作流规则（必须遵守）
-
-所有开发任务，无论大小，都必须自动按以下 agent 流水线执行，不需要用户提醒：
-
-### 各阶段触发规则
-
-| 阶段 | Agent | 何时触发 | 输入 | 输出 |
-|------|-------|---------|------|------|
-| 0 | **product-manager** | 需求模糊、需要竞品分析 | 用户的模糊想法 | `docs/PRD-*.md` |
-| 1 | **feature-decomposer** | 有明确的 PRD 或需求描述 | PRD 或用户需求 | `docs/product-spec.md` + `docs/requirements-traceability.md` |
-| 2 | **frontend-page-designer** | 有 UI/页面相关的功能需要设计 | 功能清单 | 设计规格 |
-| 3 | **module-coder** | 功能清单已确认 | 功能清单 + 设计规格 | 代码实现 |
-| 4 | **design-parity-inspector** | coder 实现了有 UI 的功能 | 代码 + 设计规格 | 设计一致性报告 |
-| 5 | **qa-inspector** | coder 到达里程碑节点 | 代码 + 追踪清单 | QA 报告 |
-
-### 流水线协作规范
-
-- 每个 agent 的输出文档是下一个 agent 的输入，**必须写入 `docs/` 目录**
-- `docs/requirements-traceability.md` 是全链路的"对账底本"
-- 上游 agent 完成后，自动启动下一个 agent，不等用户指令
-- 如果某阶段发现上游问题，可以回溯到上游 agent 补充
-
-**绝对不要跳过这个流程，不要等用户提醒，收到任务就直接启动对应流水线。**
+```
+/pipeline-init
 ```
 
-> 完整配置模板见 [examples/CLAUDE.md.example](examples/CLAUDE.md.example)，详细说明见 [workflow/agent-pipeline.md](workflow/agent-pipeline.md)
-
-### 3. 安装 Skills（可选）
-
-```bash
-# 安装小红书发布助手
-cp -r skills/xiaohongshu-publish ~/.claude/skills/
-
-# 安装 Cursor 报销自动化
-cp -r skills/cursor-billing ~/.claude/skills/
-```
+它会把流水线触发规则写入当前项目的 `CLAUDE.md`，之后该项目的所有开发任务都会自动走 7-agent 流水线。
+也可以在任意会话里输入 `/dev-pipeline` 主动激活本会话的流水线约束。
 
 ### 前置依赖
 
