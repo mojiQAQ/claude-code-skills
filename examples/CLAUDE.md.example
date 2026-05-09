@@ -16,10 +16,17 @@
          ▼
 ┌─────────────────────┐
 │ feature-decomposer   │  将 PRD/需求拆解为功能组 + 里程碑
-│ (功能拆解 Agent)     │  输出: docs/product-spec.md
-│                      │        docs/requirements-traceability.md
+│ (功能拆解 Agent)     │  输出: docs/architecture/product-spec.md
+│                      │        docs/test/requirements-traceability.md
 └────────┬────────────┘
-         │ 功能清单 + 验收标准
+         │ 功能清单 + 架构方案
+         ▼
+┌────────────────────────────┐
+│ code-reviewer (阶段一)      │  架构方案评审：程序设计/分布式/
+│ (代码评审 Agent — 架构)     │  数据库/数据安全/文档完备性
+│                             │  输出: docs/architecture/architecture-review.md
+└────────┬───────────────────┘
+         │ P0/P1 → 回退 decomposer 修方案；仅 P3 → 放行
          ▼
 ┌─────────────────────────┐
 │ frontend-page-designer   │  基于功能规格出 UI/页面设计
@@ -29,9 +36,18 @@
          ▼
 ┌─────────────────┐
 │ module-coder     │  按功能清单顺序持续编码实现
-│ (编码 Agent)     │  到里程碑节点暂停，交给 QA
+│ (编码 Agent)     │  到里程碑节点暂停，先交技术评审
 └────────┬────────┘
-         │ 代码实现
+         │ 代码实现 + milestone 报告
+         ▼
+┌────────────────────────────┐
+│ code-reviewer (阶段二)      │  代码评审：架构落地/事务一致性/
+│ (代码评审 Agent — 代码)     │  数据安全/内存泄漏/结构分离
+│                             │  输出: docs/test/code-review-M{N}.md
+└────────┬───────────────────┘
+         │ P0 → coder 立即修复
+         │ P1/P2 → coder 修后必须重新走 QA
+         │ 仅 P3 → 放行进入 QA
          ▼
 ┌────────────────────────────┐
 │ design-parity-inspector     │  审核 UI 实现与设计规格的还原度
@@ -50,22 +66,27 @@
 | 阶段 | Agent | 何时触发 | 输入 | 输出 |
 |------|-------|---------|------|------|
 | 0 | **product-manager** | 需求模糊、需要竞品分析、用户说"调研一下"、从零开始的新产品 | 用户的模糊想法 | `docs/PRD-*.md` |
-| 1 | **feature-decomposer** | 有明确的 PRD 或需求描述 | PRD 或用户需求 | `docs/product-spec.md` + `docs/requirements-traceability.md` |
-| 2 | **frontend-page-designer** | 有 UI/页面相关的功能需要设计 | 功能清单 | 设计规格 |
-| 3 | **module-coder** | 功能清单已确认 | 功能清单 + 设计规格 | 代码实现 |
-| 4 | **design-parity-inspector** | coder 实现了有 UI 的功能 | 代码 + 设计规格 | 设计一致性报告 |
-| 5 | **qa-inspector** | coder 到达里程碑节点 | 代码 + 追踪清单 + 设计审核报告 | QA 报告 |
+| 1 | **feature-decomposer** | 有明确的 PRD 或需求描述 | PRD 或用户需求 | `docs/architecture/product-spec.md` + `docs/test/requirements-traceability.md` |
+| 2a | **code-reviewer**（阶段一·架构评审） | feature-decomposer 出方案后、coder 动手前 | 产品规格 + 架构方案 | `docs/architecture/architecture-review.md` |
+| 2b | **frontend-page-designer** | 有 UI/页面相关的功能需要设计 | 功能清单 | 设计规格 |
+| 3 | **module-coder** | 架构评审通过、功能清单已确认 | 功能清单 + 设计规格 | 代码实现 + milestone 报告 |
+| 4a | **code-reviewer**（阶段二·代码评审） | coder 到达里程碑后、QA 介入前 | 代码 + 里程碑报告 + 追踪清单 | `docs/test/code-review-M{N}.md` |
+| 4b | **design-parity-inspector** | coder 实现了有 UI 的功能 | 代码 + 设计规格 | 设计一致性报告 |
+| 5 | **qa-inspector** | code-reviewer 阶段二通过后、里程碑节点 | 代码 + 追踪清单 + 各类评审报告 | QA 报告 |
 
 ### 大型需求（新功能、新页面、重构等）
 
 按需从以下步骤开始：
-- **需求模糊时**：从 product-manager 开始 → 完整走完 0-5
-- **需求明确时**：从 feature-decomposer 开始 → 走 1-5
-- **纯后端/无 UI**：跳过 frontend-page-designer 和 design-parity-inspector → 走 1, 3, 5
+- **需求模糊时**：从 product-manager 开始 → 完整走完 0 → 1 → 2a → 2b → 3 → 4a → 4b → 5
+- **需求明确时**：从 feature-decomposer 开始 → 1 → 2a → 2b → 3 → 4a → 4b → 5
+- **纯后端/无 UI**：跳过 2b 和 4b（页面设计与设计还原审核） → 1 → 2a → 3 → 4a → 5
+- **架构评审（2a）发现 P0/P1**：回退给 feature-decomposer 修方案，再次评审通过后才能进入实现
+- **代码评审（4a）发现 P0**：coder 立即修复；**P1/P2**：coder 修复后必须重新走一遍 qa-inspector；**仅 P3**：放行进入 4b/5
 
 ### 小型任务（bug 修复、小改动等）
 1. **module-coder** — 开始开发修复
-2. **qa-inspector** — 测试验收
+2. **code-reviewer**（阶段二）— 涉及安全 / 数据库 / 分布式逻辑的改动必跑；纯样式 / 文案改动可跳过
+3. **qa-inspector** — 测试验收
 
 ### 流水线协作规范
 

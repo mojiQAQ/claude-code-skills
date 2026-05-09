@@ -16,17 +16,20 @@ description: 在当前项目的 CLAUDE.md 中启用 claude-code-skills 开发流
 |------|-------|---------|
 | 0 | product-manager | 需求模糊、需要竞品调研、从零做新产品 |
 | 1 | feature-decomposer | 有明确 PRD 或需求描述 |
-| 2 | frontend-page-designer | 需要 UI/页面设计 |
-| 3 | module-coder | 功能清单已确认，进入编码 |
-| 4 | design-parity-inspector | coder 实现了有 UI 的功能 |
-| 5 | qa-inspector | coder 到达里程碑节点 |
+| 2a | code-reviewer（架构评审） | feature-decomposer 出方案后、coder 动手前 |
+| 2b | frontend-page-designer | 需要 UI/页面设计 |
+| 3 | module-coder | 架构评审通过 + 功能清单已确认 |
+| 4a | code-reviewer（代码评审） | coder 到达里程碑后、QA 介入前 |
+| 4b | design-parity-inspector | coder 实现了有 UI 的功能 |
+| 5 | qa-inspector | code-reviewer 阶段二通过后、里程碑节点 |
 
 ### 协作规范
 
-- 每个 agent 的输出必须写入 `docs/` 目录
-- `docs/requirements-traceability.md` 是全链路对账底本
+- 每个 agent 的输出必须写入 `docs/` 子目录（`docs/architecture/`、`docs/test/`）
+- `docs/test/requirements-traceability.md` 是全链路对账底本
 - 上游完成后自动调用下游，不等用户指令
-- 小任务（bug 修复等）直接走 module-coder → qa-inspector
+- code-reviewer 报 P0 → coder 立即修复；P1/P2 → coder 修后必须重新走 QA；仅 P3 → 放行
+- 小任务（bug 修复等）：module-coder → code-reviewer（涉及安全/数据库/分布式逻辑必跑） → qa-inspector
 
 **不要跳过这个流程。**
 ```

@@ -2,13 +2,13 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-Agents-orange.svg)
 
 **一套面向 [Claude Code](https://claude.ai/code) 的自定义 Agent 子系统 + 自动化开发流水线**
 
-将产品构思到代码上线的完整流程，编排为 7 个专职 Agent 的自动化流水线。
+将产品构思到代码上线的完整流程，编排为 8 个专职 Agent 的自动化流水线（含两阶段技术评审）。
 
 [Agent 总览](#agent-总览) | [流水线架构](#流水线架构) | [安装指南](#安装) | [CLAUDE.md 配置](#在-claudemd-中启用流水线) | [Skills](#附赠-skills)
 
@@ -20,7 +20,7 @@
 
 这个仓库包含：
 
-1. **7 个自定义 Agent 定义文件** — 放入 `~/.claude/agents/` 即可被 Claude Code 识别和调度
+1. **8 个自定义 Agent 定义文件** — 放入 `~/.claude/agents/` 即可被 Claude Code 识别和调度
 2. **Agent 流水线工作流配置** — 通过 `CLAUDE.md` 让 Agent 之间自动协作，形成完整的软件开发流水线
 3. **2 个自定义 Skills** — 小红书智能发布助手 + Cursor 报销自动化（附赠）
 
@@ -29,12 +29,13 @@
 | Agent | 角色 | 职责 | 输出 |
 |-------|------|------|------|
 | [`product-manager`](agents/product-manager.md) | 产品经理 | 竞品调研、用户分析、需求提炼 | `docs/PRD-*.md` |
-| [`feature-decomposer`](agents/feature-decomposer.md) | 功能拆解师 | 将 PRD 拆解为功能组 + 里程碑 + 验收标准 | `docs/product-spec.md` + `docs/requirements-traceability.md` |
-| [`frontend-page-designer`](agents/frontend-page-designer.md) | 页面设计师 | 基于功能规格产出 UI/交互设计规格 | `docs/page-design-spec.md` |
+| [`feature-decomposer`](agents/feature-decomposer.md) | 功能拆解师 | 将 PRD 拆解为功能组 + 里程碑 + 验收标准 | `docs/architecture/product-spec.md` + `docs/test/requirements-traceability.md` |
+| [`code-reviewer`](agents/code-reviewer.md) | **代码评审 / 技术守门人** | **两阶段评审**：① 架构方案评审；② 代码评审。覆盖程序设计、分布式、数据库（事务/原子性）、结构分离、数据安全。问题分级 P0/P1/P2/P3 | `docs/architecture/architecture-review.md` + `docs/test/code-review-M{N}.md` |
+| [`frontend-page-designer`](agents/frontend-page-designer.md) | 页面设计师 | 基于功能规格产出 UI/交互设计规格 | `docs/architecture/page-design-spec.md` |
 | [`designer`](agents/designer.md) | 视觉实现师 | 将设计规格转化为生产级 UI 代码 | 可工作的前端组件代码 |
-| [`module-coder`](agents/module-coder.md) | 全栈工程师 | 按功能清单连续编码，里程碑处暂停 | 代码 + `docs/milestone-N-report.md` |
-| [`design-parity-inspector`](agents/design-parity-inspector.md) | 设计还原审核 | 对比实现与设计规格的一致性 | `docs/design-parity-report.md` |
-| [`qa-inspector`](agents/qa-inspector.md) | QA 工程师 | 里程碑质量验收，4 维度评分 + 硬阈值 | `docs/milestone-N-qa-report.md` |
+| [`module-coder`](agents/module-coder.md) | 全栈工程师 | 按功能清单连续编码，里程碑处暂停 | 代码 + `docs/test/milestone-N-report.md` |
+| [`design-parity-inspector`](agents/design-parity-inspector.md) | 设计还原审核 | 对比实现与设计规格的一致性 | `docs/test/design-parity-report.md` |
+| [`qa-inspector`](agents/qa-inspector.md) | QA 工程师 | 里程碑质量验收，4 维度评分 + 硬阈值 | `docs/test/milestone-N-qa-report.md` |
 
 ### Agent 设计亮点
 
@@ -43,6 +44,7 @@
 - **module-coder**: 里程碑前强制需求对账，防止"实现了但漏了需求"；QA 通过后自动 git commit
 - **qa-inspector**: 类似 GAN 判别器的对抗设计，内置"抗宽容校准"机制，强制 E2E 浏览器测试
 - **design-parity-inspector**: 5 维度评分（还原度/统一性/业务适配/高级感/交互完整性），拒绝"AI 味"设计
+- **code-reviewer**（新增·v1.1）：纯技术评审角色，**两阶段切入**——架构方案出来后做架构评审，coder 里程碑后做代码评审。覆盖架构/分布式/数据库（事务一致性/原子性/隔离级别）/数据安全/结构分离六大维度。问题分级 P0/P1/P2/P3：P0 立即修复；P1/P2 修后必须重新走 QA；P3 延后迭代
 
 ---
 
@@ -60,47 +62,59 @@
          ▼
 ┌─────────────────────┐
 │ feature-decomposer   │  需求明确时直接从这里开始
-│ (功能拆解)           │  PRD → 功能组 + 里程碑 + 验收标准
+│ (功能拆解)           │  PRD → 功能组 + 里程碑 + 架构方案
 └────────┬────────────┘
-         │ docs/product-spec.md
-         │ docs/requirements-traceability.md
+         │ docs/architecture/product-spec.md
+         │ docs/test/requirements-traceability.md
+         ▼
+┌────────────────────────────┐
+│ code-reviewer (阶段一·架构)  │  架构方案评审：程序设计/分布式/
+│ (技术守门人)                │  数据库/数据安全/文档完备性
+└────────┬───────────────────┘  P0/P1 → 回退；仅 P3 → 放行
+         │ docs/architecture/architecture-review.md
          ▼
 ┌─────────────────────────┐
 │ frontend-page-designer   │  有 UI 时启动
 │ (页面设计)               │  功能规格 → UI/交互设计规格
 └────────┬────────────────┘
-         │ docs/page-design-spec.md
+         │ docs/architecture/page-design-spec.md
          ▼
 ┌─────────────────┐
 │ module-coder     │  按功能清单连续编码
 │ (编码实现)       │  里程碑处暂停 → 交付报告
 └────────┬────────┘
-         │ 代码 + docs/milestone-N-report.md
+         │ 代码 + docs/test/milestone-N-report.md
+         ▼
+┌────────────────────────────┐
+│ code-reviewer (阶段二·代码)  │  代码评审：架构落地/事务一致性/
+│ (技术守门人)                │  数据安全/内存泄漏/结构分离
+└────────┬───────────────────┘  P0 立即修；P1/P2 修后重 QA；仅 P3 放行
+         │ docs/test/code-review-M{N}.md
          ▼
 ┌────────────────────────────┐
 │ design-parity-inspector     │  有 UI 时启动
 │ (设计还原审核)              │  对比实现 vs 设计规格
 └────────┬───────────────────┘
-         │ docs/design-parity-report.md
+         │ docs/test/design-parity-report.md
          ▼
 ┌─────────────────┐
 │ qa-inspector     │  里程碑节点质量验收
 │ (QA 验收)        │  4 维度评分 + E2E 测试
 └────────┬────────┘
-         │ docs/milestone-N-qa-report.md
+         │ docs/test/milestone-N-qa-report.md
          ▼
     🟢 通过 → module-coder 执行 git commit → 继续下一批功能
-    🔴 不通过 → module-coder 修复 → 重新提交 QA
+    🔴 不通过 → module-coder 修复 → 重新走 code-reviewer + QA
 ```
 
 ### 三种使用模式
 
 | 模式 | 适用场景 | 流水线 |
 |------|---------|--------|
-| **完整流水线** | 新产品、需求模糊 | PM → Decomposer → Designer → Coder → Design Review → QA |
-| **简化流水线** | 需求已明确 | Decomposer → Designer → Coder → Design Review → QA |
-| **快速修复** | Bug 修复、小改动 | Coder → QA |
-| **纯后端** | 无 UI 项目 | Decomposer → Coder → QA |
+| **完整流水线** | 新产品、需求模糊 | PM → Decomposer → **Code Review 架构** → Designer → Coder → **Code Review 代码** → Design Parity → QA |
+| **简化流水线** | 需求已明确 | Decomposer → **Code Review 架构** → Designer → Coder → **Code Review 代码** → Design Parity → QA |
+| **快速修复** | Bug 修复、小改动 | Coder →（涉及安全/数据库/分布式逻辑则跑 **Code Review 代码**）→ QA |
+| **纯后端** | 无 UI 项目 | Decomposer → **Code Review 架构** → Coder → **Code Review 代码** → QA |
 
 ### 文档流转机制
 
@@ -108,13 +122,18 @@ Agent 之间通过 `docs/` 目录下的文档进行协作：
 
 ```
 docs/
-├── PRD-{产品名}-{日期}.md          ← product-manager 输出
-├── product-spec.md                 ← feature-decomposer 输出
-├── requirements-traceability.md    ← decomposer 生成，coder/QA 持续更新
-├── page-design-spec.md             ← frontend-page-designer 输出
-├── milestone-1-report.md           ← module-coder 输出
-├── milestone-1-design-review.md    ← design-parity-inspector 输出
-└── milestone-1-qa-report.md        ← qa-inspector 输出
+├── PRD-{产品名}-{日期}.md                           ← product-manager 输出
+├── architecture/
+│   ├── product-spec.md                              ← feature-decomposer 输出
+│   ├── architecture-review.md                       ← code-reviewer（阶段一）输出
+│   └── page-design-spec.md                          ← frontend-page-designer 输出
+└── test/
+    ├── requirements-traceability.md                 ← decomposer 生成，coder/QA 持续更新
+    ├── milestone-1-report.md                        ← module-coder 输出
+    ├── code-review-M1.md                            ← code-reviewer（阶段二）输出
+    ├── milestone-1-design-review.md                 ← design-parity-inspector 输出
+    ├── milestone-1-qa-report.md                     ← qa-inspector 输出
+    └── tech-debt.md                                 ← code-reviewer 沉淀的 P3 列表
 ```
 
 `requirements-traceability.md` 是核心对账文档，状态流转：
@@ -147,7 +166,7 @@ docs/
 
 安装后立刻生效：
 
-- 7 个 agents 自动注册：`product-manager`、`feature-decomposer`、`frontend-page-designer`、`designer`、`module-coder`、`design-parity-inspector`、`qa-inspector`
+- 8 个 agents 自动注册：`product-manager`、`feature-decomposer`、`code-reviewer`、`frontend-page-designer`、`designer`、`module-coder`、`design-parity-inspector`、`qa-inspector`
 - 1 个编排 skill：`/dev-pipeline` —— 激活流水线工作规则
 - 1 个工具 skill：`/cursor-billing` —— Cursor 订阅报销自动化
 - 1 个工具 skill：`/xiaohongshu-publish` —— 小红书内容发布
@@ -309,6 +328,25 @@ Claude Code 自动执行:
 - 内置"抗宽容校准"：如果第一反应给 8 分，先找 3 个问题再决定
 - 独立验证 coder 的自标记，不信任 ✅ 直到自己验证
 
+### code-reviewer（代码评审 / 技术守门人）
+
+**核心理念**: "代码能跑 ≠ 代码可靠。功能验收只能保证今天没出事，技术评审是为了保证明天、明年、流量上来后、攻击面打开后还不出事。"
+
+- **两阶段切入**：阶段一架构评审（在 coder 动手前），阶段二代码评审（在 QA 介入前）
+- **六大评审维度**：
+  - A 程序设计 / 架构（模块划分、依赖方向、SRP、可测试性）
+  - B 分布式系统（一致性、幂等、超时重试、熔断、消息可靠性、分布式事务、缓存）
+  - C 数据库设计（schema、索引、事务边界、原子性、隔离级别、并发控制、迁移安全）
+  - D 结构分离（业务/数据/接入分层、配置/代码分离、目录约定）
+  - E **数据安全**（敏感数据、存储传输、注入、越权、审计、机密泄漏 — 零容忍）
+  - F 文档完备性（仅架构评审阶段）
+- **问题分级 + 处置路径**：
+  - **P0** 紧急且必要 → coder 立即修复，回归 QA
+  - **P1** 安全漏洞 / 数据安全 / 内存泄漏 → coder 修后必须重新走 qa-inspector
+  - **P2** 重要技术债 → 同 P1 路径
+  - **P3** 命名 / 格式 / 语法糖 → 列入 `docs/test/tech-debt.md`，下次迭代
+- 与 QA 的分工：QA 看功能/UX/可靠性（动），code-reviewer 看架构/分布式/事务/安全（静）
+
 ---
 
 ## 项目结构
@@ -320,6 +358,7 @@ claude-code-skills/
 ├── agents/                                  # Agent 定义文件（核心）
 │   ├── product-manager.md                   # 产品经理 Agent
 │   ├── feature-decomposer.md                # 功能拆解 Agent
+│   ├── code-reviewer.md                     # 代码评审 Agent（架构 + 代码两阶段）
 │   ├── frontend-page-designer.md            # 页面设计 Agent
 │   ├── designer.md                          # 视觉实现 Agent
 │   ├── module-coder.md                      # 编码实现 Agent
