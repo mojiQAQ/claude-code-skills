@@ -1,0 +1,26 @@
+{
+  "name": "claude-code-skills",
+  "version": "1.1.0",
+  "description": "8-agent 软件开发流水线（PM → Decomposer → Code Review 架构 → Page Designer → Coder → Code Review 代码 → Design Parity → QA）+ 实用 Skills，让 the assistant 自动跑完从需求到上线的完整工程流程。",
+  "author": {
+    "name": "moji",
+    "url": "https://github.com/mojiQAQ"
+  },
+  "homepage": "https://github.com/mojiQAQ/claude-code-skills",
+  "repository": "https://github.com/mojiQAQ/claude-code-skills",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "architecture-review",
+    "chinese",
+    "code-reviewer",
+    "designer",
+    "feature-decomposer",
+    "module-coder",
+    "pipeline",
+    "product-manager",
+    "qa-inspector",
+    "security-review",
+    "workflow"
+  ]
+}
